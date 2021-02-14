@@ -2,21 +2,30 @@ import os
 from flask import Flask, request, jsonify, abort
 from sqlalchemy import exc
 import json
-from flask_cors import CORS
+from flask_cors import CORS, cross_origin
+import json
 
 from .database.models import db_drop_and_create_all, setup_db, Drink
 from .auth.auth import AuthError, requires_auth
 
 app = Flask(__name__)
 setup_db(app)
-CORS(app)
+CORS(app, resources={r"/api/*": {"origins": "*"}})
+
+@app.after_request
+def after_request(response):
+    response.headers.add('Access-Control-Allow-Headers',
+                         'Content-Type,Authorization')
+    response.headers.add('Access-Control-Allow-Methods',
+                         'GET,PATCH,POST,DELETE,OPTIONS')
+    return response
 
 '''
 @TODO uncomment the following line to initialize the datbase
 !! NOTE THIS WILL DROP ALL RECORDS AND START YOUR DB FROM SCRATCH
 !! NOTE THIS MUST BE UNCOMMENTED ON FIRST RUN
 '''
-# db_drop_and_create_all()
+db_drop_and_create_all()
 
 ## ROUTES
 '''
@@ -28,6 +37,19 @@ CORS(app)
         or appropriate status code indicating reason for failure
 '''
 
+@app.route('/drinks')
+@cross_origin()
+def get_drinks():
+    drinkslist = []
+    drinks = Drink.query.all()
+    if len(drinks) == 0:
+        abort(404)
+    for drink in drinks:
+        drinkslist.append(drink.short())
+    return jsonify({
+        "success": True,
+        "drinks": drinkslist
+    })
 
 '''
 @TODO implement endpoint
@@ -38,6 +60,19 @@ CORS(app)
         or appropriate status code indicating reason for failure
 '''
 
+@app.route('/drinks-detail')
+@cross_origin()
+def get_drinks_detail():
+    drinkslist = []
+    drinks = Drink.query.all()
+    if len(drinks) == 0:
+        abort(404)
+    for drink in drinks:
+        drinkslist.append(drink.long())
+    return jsonify({
+        "success": True,
+        "drinks": drinkslist
+    })
 
 '''
 @TODO implement endpoint

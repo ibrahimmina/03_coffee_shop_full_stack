@@ -5,8 +5,8 @@ import json
 
 database_filename = "database.db"
 project_dir = os.path.dirname(os.path.abspath(__file__))
-database_path = "sqlite:///{}".format(os.path.join(project_dir, database_filename))
-
+#database_path = "sqlite:///{}".format(os.path.join(project_dir, database_filename))
+database_path = "sqlite:////home/debian/coffeeshop"
 db = SQLAlchemy()
 
 '''
@@ -28,6 +28,12 @@ db_drop_and_create_all()
 def db_drop_and_create_all():
     db.drop_all()
     db.create_all()
+    drink = Drink(title="matcha shake", recipe='[{"name": "milk","color": "grey","parts": 1},{"name": "matcha","color": "green","parts": 3}]')
+    drink.insert()    
+    drink2 = Drink(title="flatwhite",recipe='[{"name":"milk","color":"grey","parts":3},{"name":"coffee","color":"brown","parts":1}]')
+    drink2.insert()
+    drink3 = Drink(title="cap",recipe='[{"name":"foam","color":"white","parts":1},{"name":"milk","color":"grey","parts":2},{"name":"coffee","color":"brown","parts":1}]')
+    drink3.insert()    
 
 '''
 Drink
@@ -42,6 +48,9 @@ class Drink(db.Model):
     # the required datatype is [{'color': string, 'name':string, 'parts':number}]
     recipe =  Column(String(180), nullable=False)
 
+    def __init__(self, title, recipe):
+        self.title = title
+        self.recipe = recipe
     '''
     short()
         short form representation of the Drink model
