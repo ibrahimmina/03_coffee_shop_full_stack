@@ -30,8 +30,18 @@ class AuthError(Exception):
         it should raise an AuthError if the header is malformed
     return the token part of the header
 '''
+
 def get_token_auth_header():
-   raise Exception('Not Implemented')
+    print ("hello world")
+    conn = http.client.HTTPSConnection("fsndcoffeeshopapp.us.auth0.com")
+    payload = "{\"client_id\":\"FzlWAeKXIqv63RJRwjX0Skeu4GitXNoJ\",\"client_secret\":\"DTPsxUYUmQEL-z0QJ0tzl8M_F_uLCFOG4PXLcZYCOIjKVU-wdFSTgdYiSOVKnlcO\",\"audience\":\"fsndcoffeeshop\",\"grant_type\":\"client_credentials\"}"
+    headers = { 'content-type': "application/json" }
+    conn.request("POST", "/oauth/token", payload, headers)
+    res = conn.getresponse()
+    data = res.read()
+
+    print(data.decode("utf-8"))
+    #raise Exception('Not Implemented')
 
 '''
 @TODO implement check_permissions(permission, payload) method

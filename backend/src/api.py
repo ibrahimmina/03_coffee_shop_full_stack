@@ -1,4 +1,5 @@
 import os
+import http.client
 from flask import Flask, request, jsonify, abort
 from sqlalchemy import exc
 import json
@@ -83,7 +84,17 @@ def get_drinks_detail():
     returns status code 200 and json {"success": True, "drinks": drink} where drink an array containing only the newly created drink
         or appropriate status code indicating reason for failure
 '''
+@app.route('/drinks',  methods=['POST'])
+def post_drinks_detail():
+    print ("hello world")
+    conn = http.client.HTTPSConnection("fsndcoffeeshopapp.us.auth0.com")
+    payload = "{\"client_id\":\"FzlWAeKXIqv63RJRwjX0Skeu4GitXNoJ\",\"client_secret\":\"DTPsxUYUmQEL-z0QJ0tzl8M_F_uLCFOG4PXLcZYCOIjKVU-wdFSTgdYiSOVKnlcO\",\"audience\":\"fsndcoffeeshop\",\"grant_type\":\"client_credentials\"}"
+    headers = { 'content-type': "application/json" }
+    conn.request("POST", "/oauth/token", payload, headers)
+    res = conn.getresponse()
+    data = res.read()
 
+    print(data.decode("utf-8"))
 
 '''
 @TODO implement endpoint
@@ -143,3 +154,8 @@ def unprocessable(error):
 @TODO implement error handler for AuthError
     error handler should conform to general task above 
 '''
+@app.route('/tabs/user-page')
+def AuthError(error):
+    print (request.headers)
+    auth_header = request.headers("Authorization")
+    print (auth_header)
