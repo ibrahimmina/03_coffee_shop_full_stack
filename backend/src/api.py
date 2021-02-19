@@ -63,7 +63,8 @@ def get_drinks():
 
 @app.route('/drinks-detail')
 @cross_origin()
-def get_drinks_detail():
+@requires_auth('get:drinks-detail')
+def get_drinks_detail(payload):
     drinkslist = []
     drinks = Drink.query.all()
     if len(drinks) == 0:
@@ -89,8 +90,10 @@ def get_drinks_detail():
 @requires_auth('post:drinks')
 def post_drinks_detail(payload):
     request_data = request.get_json()
-    dataList = request_data.get("recipe")
-    if (len(dataList) > 0):
+    if (request_data.get("title")):
+        title = request_data.get("title")    
+    if (request_data.get("recipe")):
+        dataList = request_data.get("recipe")
         recipe = '['
         for index in range(len(dataList)):
             if (index == 0):
@@ -107,7 +110,7 @@ def post_drinks_detail(payload):
     else:
         recipe = ''
     try:
-        drink = Drink(title=request_data.get("title"), recipe=recipe)
+        drink = Drink(title=title, recipe=recipe)
         drink.insert()    
         return jsonify({
             "success": True,
@@ -134,10 +137,16 @@ def post_drinks_detail(payload):
 @requires_auth('patch:drinks')
 def patch_drinks_detail(payload,drink_id):
     drink = Drink.query.filter(Drink.id == drink_id).one_or_none()
+    drinkList = []
+    drinkDict = {}
     if (drink != None):
         request_data = request.get_json()
-        dataList = request_data.get("recipe")
-        if (len(dataList) > 0):
+
+        if ( request_data.get("title")):
+             drink.title = request_data.get("title")
+        
+        if (request_data.get("recipe")):
+            dataList = request_data.get("recipe")
             recipe = '['
             for index in range(len(dataList)):
                 if (index == 0):
@@ -151,16 +160,16 @@ def patch_drinks_detail(payload,drink_id):
                     else:
                         recipe = recipe + '"' + key + '":' + str(dataList[index][key]) + '}'
             recipe = recipe + ']'
-        else:
-            recipe = ''
-        try:
-            drink.title = request_data.get("title")
             drink.recipe = recipe
-            drink.update()    
+        
+        try:
+            drink.update()  
+            drinkDict = drink.long()
+            drinkList.append(drinkDict)
             return jsonify({
                 "success": True,
-                "drinks": drink.long()
-            },200)
+                "drinks": drinkList
+            })
         except:
             db.session.rollback()
             abort(422) 
@@ -228,6 +237,7 @@ def unprocessable(error):
 
 '''
 
+
 '''
 @TODO implement error handler for 404
     error handler should conform to general task above 
@@ -245,7 +255,13 @@ def notfound(error):
     error handler should conform to general task above 
 '''
 @app.route('/tabs/user-page')
-def AuthError(error):
-    print (request.headers)
-    auth_header = request.headers("Authorization")
-    print (auth_header)
+@app.errorhandler(AuthError)
+def AuthError(AuthError):
+    return jsonify({
+                    "success": False, 
+                    "error": AuthError.status_code,
+                    "message":AuthError.error["description"]
+                    }), 401    
+    #print (request.headers)
+    #auth_header = request.headers("Authorization")
+    #print (auth_header)
