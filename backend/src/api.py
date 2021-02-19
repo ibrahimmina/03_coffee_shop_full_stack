@@ -10,7 +10,7 @@ from .database.models import db_drop_and_create_all, setup_db, Drink
 from .auth.auth import AuthError, requires_auth
 
 app = Flask(__name__)
-setup_db(app)
+db = setup_db(app)
 CORS(app, resources={r"/api/*": {"origins": "*"}})
 
 @app.after_request
@@ -85,17 +85,39 @@ def get_drinks_detail():
         or appropriate status code indicating reason for failure
 '''
 @app.route('/drinks',  methods=['POST'])
-def post_drinks_detail():
-    print ("hello world")
-    conn = http.client.HTTPSConnection("fsndcoffeeshopapp.us.auth0.com")
-    payload = "{\"client_id\":\"FzlWAeKXIqv63RJRwjX0Skeu4GitXNoJ\",\"client_secret\":\"DTPsxUYUmQEL-z0QJ0tzl8M_F_uLCFOG4PXLcZYCOIjKVU-wdFSTgdYiSOVKnlcO\",\"audience\":\"fsndcoffeeshop\",\"grant_type\":\"client_credentials\"}"
-    headers = { 'content-type': "application/json" }
-    conn.request("POST", "/oauth/token", payload, headers)
-    res = conn.getresponse()
-    data = res.read()
-
-    print(data.decode("utf-8"))
-
+@cross_origin()
+@requires_auth('post:drinks')
+def post_drinks_detail(payload):
+    request_data = request.get_json()
+    dataList = request_data.get("recipe")
+    if (len(dataList) > 0):
+        recipe = '['
+        for index in range(len(dataList)):
+            if (index == 0):
+                recipe = recipe + '{'
+            else:
+                recipe = recipe + ',{'
+            for key in dataList[index]:
+                #print(dataList[index][key])
+                if (key != "parts"):
+                    recipe = recipe + '"' + key + '":"' + dataList[index][key] + '",'
+                else:
+                    recipe = recipe + '"' + key + '":' + str(dataList[index][key]) + '}'
+        recipe = recipe + ']'
+    else:
+        recipe = ''
+    try:
+        drink = Drink(title=request_data.get("title"), recipe=recipe)
+        drink.insert()    
+        return jsonify({
+            "success": True,
+            "drinks": drink.long()
+        },200)
+    except:
+        db.session.rollback()
+        abort(422) 
+    finally:
+        db.session.close()
 '''
 @TODO implement endpoint
     PATCH /drinks/<id>
@@ -107,7 +129,46 @@ def post_drinks_detail():
     returns status code 200 and json {"success": True, "drinks": drink} where drink an array containing only the updated drink
         or appropriate status code indicating reason for failure
 '''
+@app.route('/drinks/<int:drink_id>',  methods=['PATCH'])
+@cross_origin()
+@requires_auth('patch:drinks')
+def patch_drinks_detail(payload,drink_id):
+    drink = Drink.query.filter(Drink.id == drink_id).one_or_none()
+    if (drink != None):
+        request_data = request.get_json()
+        dataList = request_data.get("recipe")
+        if (len(dataList) > 0):
+            recipe = '['
+            for index in range(len(dataList)):
+                if (index == 0):
+                    recipe = recipe + '{'
+                else:
+                    recipe = recipe + ',{'
+                for key in dataList[index]:
+                    #print(dataList[index][key])
+                    if (key != "parts"):
+                        recipe = recipe + '"' + key + '":"' + dataList[index][key] + '",'
+                    else:
+                        recipe = recipe + '"' + key + '":' + str(dataList[index][key]) + '}'
+            recipe = recipe + ']'
+        else:
+            recipe = ''
+        try:
+            drink.title = request_data.get("title")
+            drink.recipe = recipe
+            drink.update()    
+            return jsonify({
+                "success": True,
+                "drinks": drink.long()
+            },200)
+        except:
+            db.session.rollback()
+            abort(422) 
+        finally:
+            db.session.close()
 
+    else:
+        abort(404)
 
 '''
 @TODO implement endpoint
@@ -119,7 +180,30 @@ def post_drinks_detail():
     returns status code 200 and json {"success": True, "delete": id} where id is the id of the deleted record
         or appropriate status code indicating reason for failure
 '''
-
+@app.route('/drinks/<int:drink_id>',  methods=['DELETE'])
+@cross_origin()
+@requires_auth('delete:drinks')
+def delete_drinks_detail(payload,drink_id):
+    drink = Drink.query.filter(Drink.id == drink_id).one_or_none()
+    if (drink != None):
+        try:
+            drink = Drink.query.get(drink_id)
+            drink.delete()
+            db.session.commit()
+            return jsonify({
+                "success": True,
+                "delete":drink_id,
+            },200)    
+        except:
+            db.session.rollback()
+            return jsonify({
+                "success": False,
+                "delete":drink_id,
+            },200)          
+        finally:
+            db.session.close()
+    else:
+        abort(404)
 
 ## Error Handling
 '''
@@ -148,7 +232,13 @@ def unprocessable(error):
 @TODO implement error handler for 404
     error handler should conform to general task above 
 '''
-
+@app.errorhandler(404)
+def notfound(error):
+    return jsonify({
+                    "success": False, 
+                    "error": 404,
+                    "message": "not found"
+                    }), 404
 
 '''
 @TODO implement error handler for AuthError
